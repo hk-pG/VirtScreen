@@ -16,10 +16,10 @@ from PyQt5.QtQml import QQmlListProperty
 from PyQt5.QtWidgets import QApplication
 from netifaces import interfaces, ifaddresses, AF_INET
 
-from .display import DisplayProperty
-from .xrandr import XRandR
-from .process import AsyncSubprocess, SubprocessWrapper
-from .path import (DATA_PATH, CONFIG_PATH, DEFAULT_CONFIG_PATH,
+from display import DisplayProperty
+from xrandr import XRandR
+from process import AsyncSubprocess, SubprocessWrapper
+from path import (DATA_PATH, CONFIG_PATH, DEFAULT_CONFIG_PATH,
                   X11VNC_PASSWORD_PATH, X11VNC_LOG_PATH)
 
 
@@ -233,7 +233,7 @@ class Backend(QObject):
                 self.vncState = self.VNCState.WAITING
 
         def _ended(exitCode):
-            if exitCode is not 0:
+            if exitCode != 0:
                 self.vncState = self.VNCState.ERROR
                 self.promptError('X11VNC: Error occurred.\n'
                                   'Double check if the port is already used.')
@@ -282,7 +282,7 @@ class Backend(QObject):
         def _ended(exitCode):
             self.log("External Display Setting closed.")
             self.onDisplaySettingClosed.emit()
-            if exitCode is not 0:
+            if exitCode != 0:
                 self.promptError(f'Error opening "{running_program}".')
         with open(DATA_PATH, 'r') as f:
             data = json.load(f)['displaySettingApps']

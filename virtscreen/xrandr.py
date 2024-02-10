@@ -6,8 +6,13 @@ import subprocess
 import logging
 from typing import List
 
-from .display import Display
-from .process import SubprocessWrapper
+
+# from .display import Display
+import display
+Display = display.Display
+# from process import SubprocessWrapper
+import process
+SubprocessWrapper = process.SubprocessWrapper
 
 
 VIRT_SCREEN_SUFFIX = "_virt"

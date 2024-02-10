@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 # Python standard packages
 import sys
 import os
@@ -11,28 +10,28 @@ import logging
 from logging.handlers import RotatingFileHandler
 from typing import Callable
 import asyncio
-
 # Import OpenGL library for Nvidia driver
 # https://github.com/Ultimaker/Cura/pull/131#issuecomment-176088664
 import ctypes
 from ctypes.util import find_library
-ctypes.CDLL(find_library('GL'), ctypes.RTLD_GLOBAL)
-
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtQml import qmlRegisterType, QQmlApplicationEngine
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QUrl
 from quamash import QEventLoop
+from display import DisplayProperty
+from xrandr import XRandR
+from qt_backend import Backend, Cursor, Network
+from path import HOME_PATH, ICON_PATH, MAIN_QML_PATH, CONFIG_PATH, LOGGING_PATH
 
-from .display import DisplayProperty
-from .xrandr import XRandR
-from .qt_backend import Backend, Cursor, Network
-from .path import HOME_PATH, ICON_PATH, MAIN_QML_PATH, CONFIG_PATH, LOGGING_PATH
+ctypes.CDLL(find_library('GL'), ctypes.RTLD_GLOBAL)
+
 
 def error(*args, **kwargs) -> None:
     """Error printing"""
     args = ('Error: ', *args)
     print(*args, file=sys.stderr, **kwargs)
+
 
 def main() -> None:
     """Start main program"""
@@ -54,27 +53,29 @@ def main() -> None:
                'virtscreen --below --portrait           # Below, and portrait mode.\n'
                'virtscreen --below --portrait  --hipdi  # Below, portrait, HiDPI mode.\n')
     parser.add_argument('--auto', action='store_true',
-        help='create a virtual screen automatically using previous\n'
-             'settings (from both GUI mode and CLI mode)')
+                        help='create a virtual screen automatically using previous\n'
+                             'settings (from both GUI mode and CLI mode)')
     parser.add_argument('--left', action='store_true',
-        help='a virtual screen will be created left to the primary\n'
-             'monitor')
+                        help='a virtual screen will be created left to the primary\n'
+                             'monitor')
     parser.add_argument('--right', action='store_true',
-        help='right to the primary monitor')
+                        help='right to the primary monitor')
     parser.add_argument('--above', '--up', action='store_true',
-        help='above the primary monitor')
+                        help='above the primary monitor')
     parser.add_argument('--below', '--down', action='store_true',
-        help='below the primary monitor')
+                        help='below the primary monitor')
     parser.add_argument('--portrait', action='store_true',
-        help='Portrait mode. Width and height of the screen are swapped')
+                        help='Portrait mode. Width and height of the screen are swapped')
     parser.add_argument('--hidpi', action='store_true',
-        help='HiDPI mode. Width and height are doubled')
+                        help='HiDPI mode. Width and height are doubled')
     parser.add_argument('--log', type=str,
-        help='Python logging level, For example, --log=INFO.\n'
-             'Only used for reporting bugs and debugging')
+                        help='Python logging level, For example, --log=INFO.\n'
+                             'Only used for reporting bugs and debugging')
+
     # Add signal handler
     def on_exit(self, signum=None, frame=None):
         sys.exit(0)
+
     for sig in [signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
         signal.signal(sig, on_exit)
 
@@ -88,13 +89,14 @@ def main() -> None:
     error('Program should not reach here.')
     sys.exit(1)
 
+
 def check_env(args: argparse.Namespace, msg: Callable[[str], None]) -> None:
     """Check environments and arguments before start. This also enable logging"""
     if os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland':
         msg("Currently Wayland is not supported")
         sys.exit(1)
     # Check ~/.config/virtscreen
-    if not HOME_PATH: # This is set in path.py
+    if not HOME_PATH:  # This is set in path.py
         msg("Cannot detect home directory.")
         sys.exit(1)
     if not os.path.exists(HOME_PATH):
@@ -122,7 +124,7 @@ def check_env(args: argparse.Namespace, msg: Callable[[str], None]) -> None:
                         **({'filename': LOGGING_PATH} if log_to_file else {}))
     if log_to_file:
         logger = logging.getLogger()
-        handler = RotatingFileHandler(LOGGING_PATH, mode='a', maxBytes=1024*4, backupCount=1)
+        handler = RotatingFileHandler(LOGGING_PATH, mode='a', maxBytes=1024 * 4, backupCount=1)
         logger.addHandler(handler)
     logging.info('logging enabled')
     del args['log']
@@ -134,6 +136,7 @@ def check_env(args: argparse.Namespace, msg: Callable[[str], None]) -> None:
         msg(str(e))
         sys.exit(1)
 
+
 def main_gui(args: argparse.Namespace):
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
@@ -144,6 +147,7 @@ def main_gui(args: argparse.Namespace):
     from PyQt5.QtWidgets import QMessageBox, QSystemTrayIcon
     def dialog(message: str) -> None:
         QMessageBox.critical(None, "VirtScreen", message)
+
     if not QSystemTrayIcon.isSystemTrayAvailable():
         dialog("Cannot detect system tray on this system.")
         sys.exit(1)
@@ -169,6 +173,7 @@ def main_gui(args: argparse.Namespace):
     sys.exit(app.exec_())
     with loop:
         loop.run_forever()
+
 
 def main_cli(args: argparse.Namespace):
     loop = asyncio.get_event_loop()
@@ -199,20 +204,25 @@ def main_cli(args: argparse.Namespace):
         for key, value in tmp_args.items():
             if value:
                 position = key
+
     # Create virtscreen and Start VNC
     def handle_error(msg):
         error(msg)
         sys.exit(1)
+
     backend.onError.connect(handle_error)
     backend.createVirtScreen(config['virt']['device'], config['virt']['width'],
-                        config['virt']['height'], config['virt']['portrait'],
-                        config['virt']['hidpi'], position)
+                             config['virt']['height'], config['virt']['portrait'],
+                             config['virt']['hidpi'], position)
+
     def handle_vnc_changed(state):
         if state is backend.VNCState.OFF:
             sys.exit(0)
+
     backend.onVncStateChanged.connect(handle_vnc_changed)
     backend.startVNC(config['vnc']['port'])
     loop.run_forever()
+
 
 if __name__ == '__main__':
     main()
